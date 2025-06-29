@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirigir todas las solicitudes al directorio /admin/ al archivo login.php
+    RewriteRule ^admin/$ admin/login.php [L]
+    
+    # Proteger archivos sensibles
+    <FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql)$">
+        Order Allow,Deny
+        Deny from all
+    </FilesMatch>
+    
+    # Proteger directorios
+    <FilesMatch "(config|auth|funciones)\.php$">
+        Order Allow,Deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
