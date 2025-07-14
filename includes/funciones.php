@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 
+
 function obtenerColaboradoresPorNivel($nivel, $soloActivos = true) {
     global $db;
     
@@ -52,52 +53,52 @@ function actualizarProximosCumpleanos() {
     global $db;
     
     $hoy = new DateTime();
-    $sql = "SELECT nombre, DATE_FORMAT(cumpleanos, '%d/%m') as fecha 
+    $hoy_md = $hoy->format('m-d');
+    
+    $sql = "SELECT nombre, cumpleanos 
             FROM colaboradores 
-            WHERE activo = 1 AND DATE_FORMAT(cumpleanos, '%m-%d') BETWEEN DATE_FORMAT(NOW(), '%m-%d') 
-            AND DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 30 DAY), '%m-%d')
-            ORDER BY DATE_FORMAT(cumpleanos, '%m-%d') LIMIT 3";
+            WHERE activo = 1 
+            AND (
+                DATE_FORMAT(cumpleanos, '%m-%d') = DATE_FORMAT(NOW(), '%m-%d')
+                OR DATE_FORMAT(cumpleanos, '%m-%d') BETWEEN DATE_FORMAT(NOW(), '%m-%d') 
+                AND DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 30 DAY), '%m-%d')
+            )
+            ORDER BY 
+                CASE WHEN DATE_FORMAT(cumpleanos, '%m-%d') = DATE_FORMAT(NOW(), '%m-%d') THEN 0 ELSE 1 END,
+                DATE_FORMAT(cumpleanos, '%m-%d')
+            LIMIT 3";
     
     $stmt = $db->query($sql);
     $cumpleanos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     if (empty($cumpleanos)) {
-        return 'No hay cumpleaños próximos en los próximos 30 días';
+        return '<div>No hay cumpleaños próximos en los próximos 30 días</div>';
     }
     
-    return implode(', ', array_map(function($persona) {
-        return "{$persona['nombre']} ({$persona['fecha']})";
-    }, $cumpleanos));
-}
-
-function obtenerColaborador($id) {
-    global $db;
+    $resultado = '<ul style="list-style-type: none; padding-left: 0; margin: 0;">';
     
-    $stmt = $db->prepare("SELECT * FROM colaboradores WHERE id = ?");
-    $stmt->execute([$id]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-}
-
-function obtenerColaboradores($soloActivos = false) {
-    global $db;
-    
-    $sql = "SELECT * FROM colaboradores";
-    if ($soloActivos) {
-        $sql .= " WHERE activo = 1";
+    foreach ($cumpleanos as $persona) {
+        $fechaCumple = new DateTime($persona['cumpleanos']);
+        $fechaCumple->setDate($hoy->format('Y'), $fechaCumple->format('m'), $fechaCumple->format('d'));
+        
+        $diferencia = $hoy->diff($fechaCumple);
+        $dias = $diferencia->days;
+        
+        if ($dias === 0) {
+            // Estilo para el cumpleañero de hoy
+            $resultado .= '<li style="background-color: #078181ff; color: #f18c07ff; padding: 5px; border-radius: 4px; margin-bottom: 3px;">';
+            $resultado .= '🎉 <strong>'.$persona['nombre'].'</strong> 🎉 (HOY)';
+            $resultado .= '</li>';
+        } else {
+            // Estilo normal para otros cumpleaños
+            $resultado .= '<li style="padding: 5px; margin-bottom: 3px;">';
+            $resultado .= $persona['nombre'].' (en '.$dias.' día'.($dias != 1 ? 's' : '').')';
+            $resultado .= '</li>';
+        }
     }
-    $sql .= " ORDER BY nivel, nombre";
     
-    return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-}
-
-function agregarColaborador($datos) {
-    global $db;
-    
-    $sql = "INSERT INTO colaboradores (identificador, nombre, cargo, descripcion, hobby, cumpleanos, ingreso, foto, nivel, activo) 
-            VALUES (:identificador, :nombre, :cargo, :descripcion, :hobby, :cumpleanos, :ingreso, :foto, :nivel, :activo)";
-    
-    $stmt = $db->prepare($sql);
-    return $stmt->execute($datos);
+    $resultado .= '</ul>';
+    return $resultado;
 }
 
 function actualizarColaborador($id, $datos) {

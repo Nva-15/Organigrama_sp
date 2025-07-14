@@ -69,8 +69,10 @@ foreach ($todosColaboradores as $colab) {
         <a href="admin/dashboard.php" class="admin-link"><i class="fas fa-cog"></i> Panel Admin</a>
       <?php endif; ?>
       <div class="proximos-cumples">
-        <h3><i class="fas fa-birthday-cake"></i> Próximos cumpleaños</h3>
-        <div id="cumpleanos-notificacion"></div>
+          <h3><i class="fas fa-birthday-cake"></i> Próximos cumpleaños</h3>
+          <div id="cumpleanos-notificacion">
+              <?php echo actualizarProximosCumpleanos(); ?>
+          </div>
       </div>
     </header>
 
